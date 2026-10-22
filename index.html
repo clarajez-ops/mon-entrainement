@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mon Entraînement</title>
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Entraînement">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="view-title">Calendrier</h1>
+  </header>
+
+  <main id="app">
+    <!-- Calendrier -->
+    <section id="view-calendar" class="view active">
+      <div class="month-nav">
+        <button class="icon-btn" id="prev-month" aria-label="Mois précédent">‹</button>
+        <h2 id="month-label"></h2>
+        <button class="icon-btn" id="next-month" aria-label="Mois suivant">›</button>
+      </div>
+      <div class="weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+      <div class="legend">
+        <span><i class="dot course"></i>Course</span>
+        <span><i class="dot basket"></i>Basket</span>
+        <span><i class="dot renfo"></i>Renfo</span>
+      </div>
+      <div class="day-header">
+        <h3 id="day-label"></h3>
+        <button class="btn small" id="add-on-day">+ Séance</button>
+      </div>
+      <div id="day-sessions" class="list"></div>
+    </section>
+
+    <!-- Suggestions -->
+    <section id="view-suggest" class="view">
+      <div id="suggest-content"></div>
+    </section>
+
+    <!-- Stats -->
+    <section id="view-stats" class="view">
+      <div id="stats-content"></div>
+    </section>
+
+    <!-- Réglages -->
+    <section id="view-settings" class="view">
+      <form id="settings-form" class="card form">
+        <h3>Profil</h3>
+        <label>Âge <input type="number" name="age" inputmode="numeric" min="10" max="99"></label>
+        <label>FC max (bpm) <input type="number" name="hrMax" inputmode="numeric" placeholder="auto"></label>
+        <label>FC repos (bpm) <input type="number" name="hrRest" inputmode="numeric" placeholder="optionnel"></label>
+        <button class="btn" type="submit">Enregistrer</button>
+      </form>
+
+      <div class="card form">
+        <h3>Strava</h3>
+        <p class="muted" id="strava-status"></p>
+        <details>
+          <summary>Configurer la connexion</summary>
+          <ol class="muted small-text">
+            <li>Sur <b>strava.com/settings/api</b>, crée une application.</li>
+            <li>« Domaine de rappel d'autorisation » : <code id="callback-domain"></code></li>
+            <li>Copie ici l'ID client et le secret client.</li>
+          </ol>
+          <form id="strava-form">
+            <label>ID client <input name="stravaClientId" inputmode="numeric" autocomplete="off"></label>
+            <label>Secret client <input name="stravaClientSecret" type="password" autocomplete="off"></label>
+            <label>Refresh token (optionnel) <input name="stravaRefresh" type="password" autocomplete="off"></label>
+            <button class="btn" type="submit">Enregistrer</button>
+          </form>
+        </details>
+        <div class="row">
+          <button class="btn" id="strava-connect">Se connecter à Strava</button>
+          <button class="btn secondary" id="strava-sync">Synchroniser</button>
+        </div>
+      </div>
+
+      <div class="card form">
+        <h3>Sauvegarde</h3>
+        <p class="muted small-text">Les données sont stockées sur ton iPhone. Exporte-les de temps en temps.</p>
+        <div class="row">
+          <button class="btn secondary" id="export-btn">Exporter</button>
+          <label class="btn secondary file-btn">Importer<input type="file" id="import-file" accept="application/json"></label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-view="calendar" class="active"><span class="tab-ico">📅</span>Calendrier</button>
+    <button data-view="suggest"><span class="tab-ico">💡</span>Conseils</button>
+    <button data-view="stats"><span class="tab-ico">📈</span>Stats</button>
+    <button data-view="settings"><span class="tab-ico">⚙️</span>Réglages</button>
+  </nav>
+
+  <!-- Éditeur de séance -->
+  <dialog id="session-dialog">
+    <form id="session-form" method="dialog" class="form">
+      <div class="sheet-head">
+        <button type="button" class="link" id="cancel-session">Annuler</button>
+        <h3 id="session-dialog-title">Séance</h3>
+        <button type="submit" class="link strong">OK</button>
+      </div>
+      <input type="hidden" name="sid">
+      <div class="segmented" id="sport-picker">
+        <label><input type="radio" name="sport" value="course" checked><span>🏃 Course</span></label>
+        <label><input type="radio" name="sport" value="basket"><span>🏀 Basket</span></label>
+        <label><input type="radio" name="sport" value="renfo"><span>💪 Renfo</span></label>
+      </div>
+      <label class="run-only">Type de course
+        <select name="runType">
+          <option value="ef">Endurance fondamentale (EF)</option>
+          <option value="classique">Footing classique</option>
+          <option value="fractionne">Fractionné / VMA</option>
+          <option value="seuil">Seuil / Tempo</option>
+          <option value="longue">Sortie longue</option>
+          <option value="recup">Récupération</option>
+          <option value="competition">Compétition</option>
+        </select>
+      </label>
+      <div class="two">
+        <label>Date <input type="date" name="date" required></label>
+        <label>Heure <input type="time" name="time"></label>
+      </div>
+      <div class="two">
+        <label>Durée prévue (min) <input type="number" name="plannedDuration" inputmode="numeric" min="0"></label>
+        <label class="run-only">Distance prévue (km) <input type="number" name="plannedDistance" inputmode="decimal" step="0.1" min="0"></label>
+      </div>
+      <label>Contenu de la séance <textarea name="plan" rows="3" placeholder="ex : 20' EF + 10×30/30 + 10' RAC"></textarea></label>
+
+      <label class="switch"><input type="checkbox" name="done"> <span>Séance réalisée</span></label>
+      <fieldset class="results">
+        <legend>Résultats</legend>
+        <div class="two">
+          <label class="run-only">Distance (km) <input type="number" name="distance" inputmode="decimal" step="0.01" min="0"></label>
+          <label>Durée (hh:mm:ss) <input name="duration" placeholder="0:45:00" inputmode="numeric"></label>
+        </div>
+        <div class="two">
+          <label>FC moyenne <input type="number" name="hrAvg" inputmode="numeric"></label>
+          <label>FC max <input type="number" name="hrMaxSession" inputmode="numeric"></label>
+        </div>
+        <label>Ressenti (1 facile → 10 épuisant) <input type="range" name="rpe" min="1" max="10" value="5"><output id="rpe-out">5</output></label>
+        <label>Notes <textarea name="notes" rows="2"></textarea></label>
+      </fieldset>
+      <button type="button" class="btn danger" id="delete-session">Supprimer la séance</button>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/coach.js"></script>
+  <script src="js/strava.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
